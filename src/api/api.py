@@ -2,6 +2,7 @@ from pydantic import parse_obj_as
 from pydantic import BaseModel
 import redis.asyncio as redis
 from fastapi import FastAPI
+from fastapi import status
 import clickhouse_connect
 from pathlib import Path
 from uuid import uuid4
@@ -28,7 +29,7 @@ class Test(BaseModel):
     rate: float
 
 
-@app.post("/create/")
+@app.post("/create/", status_code=status.HTTP_201_CREATED)
 async def create(test: Test) -> int:
     test: dict = test.dict()
     test['active'] = str(test['active']).lower()
