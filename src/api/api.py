@@ -1,4 +1,3 @@
-from pydantic import parse_obj_as
 from pydantic import BaseModel
 import redis.asyncio as redis
 from fastapi import FastAPI
@@ -36,14 +35,10 @@ async def create(test: Test) -> int:
     return await scripts['insert'](keys=list(test.keys()), args=list(test.values()))
 
 @app.get("/flush/")
-async def flush() -> list[Test]:
+async def flush() -> int:
     await scripts['swap'](args=[str(uuid4())])
     data = json.loads(await scripts['export'](keys=['user_id', 'username', 'active', 'rate'], args=['test']))
     data = data.get('data', dict())
-    if len(data) == 0:
-        res = []
-    else:
+    if len(data) != 0:
         c.insert('test', data=list(data.values()), column_names=list(data.keys()), column_oriented=True)
-        res = c.query("SELECT * FROM test LIMIT 10").named_results()
-    await scripts['clean']()
-    return parse_obj_as(list[Test], res)
+    return await scripts['clean']()

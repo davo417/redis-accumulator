@@ -12,14 +12,17 @@ if not id then
     return nil;
 end
 
--- Delete swaped chunk lenght
-redis.call("del", "chunk:"..id..":len");
-
 -- Delete swaped chunk fields
 local fields = redis.call("keys", "chunk:"..id..":field:*");
 if table.getn(fields) > 0 then
     redis.call("del", unpack(fields));
 end
 
+-- Delete swaped chunk lenght
+local len = redis.call("get", "chunk:"..id..":len");
+redis.call("del", "chunk:"..id..":len");
+
 -- Delete swaped chunk id
-return redis.call("del", "chunk:id:swap");
+redis.call("del", "chunk:id:swap");
+
+return len;
