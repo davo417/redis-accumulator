@@ -9,7 +9,7 @@
 
 
 -- Empty payload table
-local payload = {meta={}, data={}, rows=0};
+local payload = {meta={}, data={}};
 
 -- Swaped chunk id
 local id = redis.call("get", "chunk:id:swap");
@@ -26,9 +26,6 @@ local len = tonumber(redis.call("get", "chunk:"..id..":len"));
 if not len then
     return cjson.encode(payload);
 end
-
--- Set payload row count
-payload.rows = len;
 
 -- Resolve field names for schema
 local keys;
