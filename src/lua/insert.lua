@@ -20,5 +20,5 @@ for index, key in ipairs(KEYS) do
     redis.call("rpush", "chunk:"..id..":field:"..key, ARGV[index]);
 end
 
--- Increment chunk lenght counter
+-- Increment chunk length counter
 return redis.call("incr", "chunk:"..id..":len");

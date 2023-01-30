@@ -16,7 +16,7 @@ local id = redis.call("get", "chunk:id:swap");
 
 -- Return empty payload if swaped chunk is not set
 if not id then
-    return cjson.encode(payload);
+    return nil
 end
 
 -- Swaped chunk lenght
@@ -24,7 +24,7 @@ local len = tonumber(redis.call("get", "chunk:"..id..":len"));
 
 -- Return empty payload if swaped chunk is empty
 if (not len) or (len == 0) then
-    return cjson.encode(payload);
+    return nil
 end
 
 -- Resolve field names for schema

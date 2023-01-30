@@ -17,5 +17,5 @@ end
 -- Set new chunk id
 redis.call("set", "chunk:id:current", ARGV[1]);
 
--- Set new chunk lenght to 0
+-- Set new chunk length to 0
 return redis.call("set", "chunk:"..ARGV[1]..":len", 0);

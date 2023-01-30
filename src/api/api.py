@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from fastapi import status
 from pathlib import Path
 from uuid import uuid4
-import orjson as json
 from glob import glob
 
 
@@ -31,22 +30,15 @@ class Flush(BaseModel):
     row_count: int
 
 
-@app.post("/create/", status_code=status.HTTP_201_CREATED)
-async def create(test: Test) -> int:
-    test: dict = test.dict()
-    test['active'] = str(test['active']).lower()
-    return await scripts['insert'](keys=list(test.keys()), args=list(test.values()))
-
-@app.get("/flush/")
-async def flush() -> Flush:
-    current_lenght = await scripts['lenght'](keys=['current'])
+async def do_flush() -> int:
+    current_lenght = await scripts['length'](keys=['current'])
     if current_lenght == b'0':
-        return Flush(row_count=0)
+        return 0
 
     await scripts['swap'](args=[str(uuid4())])
     insert = await subprocess.create_subprocess_shell(
-        'echo $(redis-cli --eval ../lua/export.lua "all" , "test")' + ' | ' +
-        'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"'
+        """echo $(redis-cli --eval ../lua/export.lua "all" , "test")"""# + ' | ' +
+        # 'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"'
     )
     ierr, iout = await insert.communicate()
     if (ierr is not None) and (len(ierr) != 0):
@@ -54,6 +46,18 @@ async def flush() -> Flush:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={'message': ierr}
         )
+    cleaned = await scripts['clean']() or 0
+    return int(cleaned)
 
-    inserted = await scripts['clean']()
+
+@app.post("/create/", status_code=status.HTTP_201_CREATED)
+async def create(test: Test) -> int:
+    test: dict = test.dict()
+    test['active'] = str(test['active']).lower()
+    
+    return await scripts['insert'](keys=list(test.keys()), args=list(test.values()))
+
+@app.get("/flush/")
+async def flush() -> Flush:
+    inserted = await do_flush()
     return Flush(row_count=inserted)
