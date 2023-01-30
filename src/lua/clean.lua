@@ -17,7 +17,9 @@ redis.call("del", "chunk:"..id..":len");
 
 -- Delete swaped chunk fields
 local fields = redis.call("keys", "chunk:"..id..":field:*");
-redis.call("del", unpack(fields));
+if table.getn(fields) > 0 then
+    redis.call("del", unpack(fields));
+end
 
 -- Delete swaped chunk id
 return redis.call("del", "chunk:id:swap");

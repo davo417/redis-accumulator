@@ -23,7 +23,7 @@ end
 local len = tonumber(redis.call("get", "chunk:"..id..":len"));
 
 -- Return empty payload if swaped chunk is empty
-if not len then
+if (not len) or (len == 0) then
     return cjson.encode(payload);
 end
 
