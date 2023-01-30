@@ -7,7 +7,7 @@
 -- Swaped chunk id
 local id = redis.call("get", "chunk:id:swap");
 
--- Exis if no swaped chunk is set
+-- Exit if no swaped chunk is set
 if not id then
     return nil;
 end
