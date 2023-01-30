@@ -8,7 +8,7 @@ echo "FLUSH"
 echo
 
 # set test schema
-redis-cli --eval ../src/schema.lua 'test' 'a' 'b' 'c', 'Int32' 'Float64' 'Bool' 'String' > /dev/null
+redis-cli --eval ../src/schema.lua 'test' 'a' 'b' 'c' 'd' , 'Int32' 'Float64' 'Bool' 'String' > /dev/null
 echo "Schema:"
 echo "$(redis-cli hgetall schema:test)"
 echo
@@ -23,9 +23,9 @@ echo "Lenght: $(redis-cli get chunk:123:len)"
 echo
 
 # swap chunk
-redis-cli --eval ../src/swap.lua , 456
+redis-cli --eval ../src/swap.lua , 456 > /dev/null
 # export previous chunk with test schema
-echo "$(redis-cli --eval ../src/extract.lua 'a' 'b' 'c' 'd' , 'test')" | python -m json.tool
+echo "$(redis-cli --eval ../src/export.lua 'a' 'b' 'c' 'd' , 'test')" | python -m json.tool
 # clean previous chunk data
 redis-cli --eval ../src/clean.lua > /dev/null
 echo
@@ -42,7 +42,7 @@ echo
 # swap chunk
 redis-cli --eval ../src/swap.lua , 789 > /dev/null
 # export previous chunk with test schema
-echo "$(redis-cli --eval ../src/extract.lua 'all' , 'test')" | python -m json.tool
+echo "$(redis-cli --eval ../src/export.lua 'all' , 'test')" | python -m json.tool
 # clean previous chunk data
 redis-cli --eval ../src/clean.lua > /dev/null
 echo
