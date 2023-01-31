@@ -27,7 +27,7 @@ def on_starting(server):
 
     scripts = {Path(n).stem: load_script(n) for n in glob("../lua/*.lua")}
     scripts['schema'](keys=['test', 'user_id', 'username', 'active', 'rate'], args=['UInt32', 'String', 'Bool', 'Float64'])
-    scripts['swap'](args=[str(uuid4())])
+    scripts['init'](args=[1000])
 
 
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'

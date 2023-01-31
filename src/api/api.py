@@ -10,7 +10,7 @@ from glob import glob
 
 
 app = FastAPI()
-r = redis.Redis(host="localhost", decode_responses=False)
+r = redis.Redis(host="localhost", decode_responses=True)
 
 def load_script(path):
     with open(path) as script:
@@ -30,31 +30,27 @@ class Flush(BaseModel):
     row_count: int
 
 
-async def do_flush() -> int:
-    current_lenght = await scripts['length'](keys=['current'])
-    if current_lenght == b'0':
-        return 0
-
-    await scripts['swap'](args=[str(uuid4())])
-    insert = await subprocess.create_subprocess_shell(
-        """echo $(redis-cli --eval ../lua/export.lua "all" , "test")"""# + ' | ' +
-        # 'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"'
-    )
-    ierr, iout = await insert.communicate()
-    if (ierr is not None) and (len(ierr) != 0):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={'message': ierr}
+async def do_flush() -> int:        
+    for chunk in (await r.smembers("chunk:id:swap")):
+        insert = await subprocess.create_subprocess_shell(
+            f'echo $(redis-cli --eval ../lua/export.lua "{chunk}" "test" , "all")' + ' | ' +
+            'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"'
         )
-    cleaned = await scripts['clean']() or 0
-    return int(cleaned)
+        ierr, iout = await insert.communicate()
+        if (ierr is not None) and (len(ierr) != 0):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={'message': ierr}
+            )
+        await r.smove("chunk:id:swap", "chunk:id:clean", chunk)
+
+    return int(await scripts['clean'](keys=['all']))
 
 
 @app.post("/create/", status_code=status.HTTP_201_CREATED)
 async def create(test: Test) -> int:
     test: dict = test.dict()
-    test['active'] = str(test['active']).lower()
-    
+    test['active'] = str(test['active']).lower()    
     return await scripts['insert'](keys=list(test.keys()), args=list(test.values()))
 
 @app.get("/flush/")

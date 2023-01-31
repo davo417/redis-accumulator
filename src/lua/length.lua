@@ -1,24 +1,16 @@
 -- length.lua
--- Check current or swaped chunk length
+-- Check current chunk length
 
--- KEYS: chunk name: current/swaped
+-- e.g.: redis-cli --eval length.lua
 
--- e.g.: redis-cli --eval length.lua 'name'
-
-
--- Exit if chunk name is not valid
-local name = KEYS[1]
-if (name ~= "current") and (name ~= "swaped") then
-    return nil
-end
 
 -- Current chunk id
-local id = redis.call("get", "chunk:id:"..name);
+local id = redis.call("get", "chunk:id:current");
 
--- Exit if no chunk is set
+-- Exit if no current chunk is set
 if not id then
     return nil;
 end
 
--- Return chunk length
+-- Return current chunk length
 return redis.call("get", "chunk:"..id..":len");

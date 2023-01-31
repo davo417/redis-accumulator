@@ -1,21 +1,19 @@
 -- export.lua
 -- Export a chunk in json format
 
--- KEYS: field names
--- ARGV: schema id, "all" resolve as all fields in schema
+-- KEYS: chunk id, schema name
+-- ARGV: field names, "all" resolve as all fields in schema
 
--- e.g.: redis-cli --eval export.lua 'field1' 'field2' , 'schema'
--- e.g.: redis-cli --eval export.lua 'all' , 'schema'
+-- e.g.: redis-cli --eval export.lua 'chunk1' 'schema' , 'field1' 'field2'
+-- e.g.: redis-cli --eval export.lua 'chunk1' 'schema' , 'all'
 
 
 -- Empty payload table
 local payload = {meta={}, data={}};
 
--- Swaped chunk id
-local id = redis.call("get", "chunk:id:swap");
-
--- Return empty payload if swaped chunk is not set
-if not id then
+local id = KEYS[1]
+-- Return empty payload if swaped chunk is invalid
+if redis.call("sismember", "chunk:id:swap", id) == 0 then
     return nil
 end
 
@@ -28,15 +26,15 @@ if (not len) or (len == 0) then
 end
 
 -- Resolve field names for schema
-local keys;
-if KEYS[1] == "all" then
-    keys = redis.call("hkeys", "schema:"..ARGV[1]);
+local fields;
+if ARGV[1] == "all" then
+    fields = redis.call("hkeys", "schema:"..KEYS[2]);
 else
-    keys = KEYS;
+    fields = ARGV;
 end
 
 -- Get field types for schema
-local schema = redis.call("hmget", "schema:"..ARGV[1], unpack(keys));
+local schema = redis.call("hmget", "schema:"..KEYS[2], unpack(fields));
 
 
 -- String to Bool converter
@@ -57,9 +55,9 @@ end
 
 
 -- Fill payload with meta-data and values
-for keyi, key in ipairs(keys) do
+for fieldi, field in ipairs(fields) do
     -- Field type
-    local dtype = schema[keyi];
+    local dtype = schema[fieldi];
 
     -- Check field type and set appropiate converter
     local converter;
@@ -79,7 +77,7 @@ for keyi, key in ipairs(keys) do
 
     if converter ~= nil then
         -- Get field values
-        local data = redis.call("lrange", "chunk:"..id..":field:"..key, 0, len);
+        local data = redis.call("lrange", "chunk:"..id..":field:"..field, 0, len);
 
         -- Convert string values to number or booleanif needed
         if converter then
@@ -89,9 +87,9 @@ for keyi, key in ipairs(keys) do
         end
 
         -- Set field meta-data, name and type
-        payload.meta[keyi] = {name=key, type=dtype}
+        payload.meta[fieldi] = {name=field, type=dtype}
         -- Set field values
-        payload.data[key] = data;
+        payload.data[field] = data;
     end
 end
 
