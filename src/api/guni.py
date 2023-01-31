@@ -1,47 +1,66 @@
+import os
+
+
 def on_starting(server):
-    import clickhouse_connect
-    from pathlib import Path
-    from glob import glob
-    import redis
-    import os
-
-    c = clickhouse_connect.get_client(host='localhost', port=8123, username='default', database='redis')
-    c.command("DROP TABLE IF EXISTS test")
-    c.command("""
-        CREATE TABLE IF NOT EXISTS test (
-                user_id UInt32,
-                username String,
-                active Bool,
-                rate Float64
-        ) ENGINE=MergeTree()
-        PRIMARY KEY (user_id)
-    """)
-    
-    r = redis.Redis(host="localhost", decode_responses=False, db=1)
-    r.flushall()
-
-    def load_script(path):
-        with open(path) as script:
-            hash = r.register_script(script.read())
-        return hash
-
-    scripts = {Path(n).stem: load_script(n) for n in glob("../lua/*.lua")}
-    scripts['schema'](keys=['test', 'user_id', 'username', 'active', 'rate'], args=['UInt32', 'String', 'Bool', 'Float64'])
-    max_length = os.environ.get("REDIS_CHUNK_MAX_LEN", 10000)
-    scripts['init'](args=[max_length])
+    """
+    Attach a set of IDs that can be temporarily re-used.
+    Used on reloads when each worker exists twice.
+    """
+    server._worker_id_overload = set()
 
 
-# from os import cpu_count
+def nworkers_changed(server, new_value, old_value):
+    """
+    Gets called on startup too.
+    Set the current number of workers.  Required if we raise the worker count
+    temporarily using TTIN because server.cfg.workers won't be updated and if
+    one of those workers dies, we wouldn't know the ids go that far.
+    """
+    server._worker_id_current_workers = new_value
 
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+
+def _next_worker_id(server):
+    """
+    If there are IDs open for re-use, take one.  Else look for a free one.
+    """
+    if server._worker_id_overload:
+        return server._worker_id_overload.pop()
+
+    in_use = set(w._worker_id for w in tuple(server.WORKERS.values()) if w.alive)
+    free = set(range(1, server._worker_id_current_workers + 1)) - in_use
+
+    return free.pop()
+
+
+def on_reload(server):
+    """
+    Add a full set of ids into overload so it can be re-used once.
+    """
+    server._worker_id_overload = set(range(1, server.cfg.workers + 1))
+
+
+def pre_fork(server, worker):
+    """
+    Attach the next free worker_id before forking off.
+    """
+    worker._worker_id = _next_worker_id(server)
+
+
+def post_fork(server, worker):
+    """
+    Put the worker_id into an env variable for further use within the app.
+    """
+    os.environ["APP_WORKER_ID"] = str(worker._worker_id)
+
+
+# access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 worker_class = 'uvicorn.workers.UvicornWorker'
 wsgi_app = 'api.api:app'
-accesslog = 'access.log'
+# accesslog = 'access.log'
 bind = '127.0.0.1:8000'
 capture_output = True
 preload_app = False
 pythonpath = '..'
 errorlog = '-'
 reload = False
-workers = 4 #2*(cpu_count() or 0) + 1
-threads = 2
+workers = 4 #2*(os.cpu_count() or 0) + 1

@@ -11,12 +11,10 @@ from glob import glob
 import orjson
 
 
-DB = 1
-
 r = redis.Redis.from_url(
     url="unix:///var/run/redis/redis.sock",
     decode_responses=True,
-    db=DB
+    db=1
 )
 
 def load_script(path):
@@ -47,6 +45,30 @@ class Rows(BaseModel):
 
 
 app = FastAPI(default_response_class=ORJSONResponse)
+
+@app.on_event("startup")
+async def startup():
+    import os
+    ID = os.environ["APP_WORKER_ID"]
+    if ID == '1':
+        from contextlib import asynccontextmanager
+        async with asynccontextmanager(get_db)() as db:
+            await db.execute("DROP TABLE IF EXISTS test")
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS test (
+                        user_id UInt32,
+                        username String,
+                        active Bool,
+                        rate Float64
+                ) ENGINE=MergeTree()
+                PRIMARY KEY (user_id)
+            """)
+        
+        await r.flushall()
+        await scripts['schema'](keys=['test', 'user_id', 'username', 'active', 'rate'], args=['UInt32', 'String', 'Bool', 'Float64'])
+        max_length = os.environ.get("REDIS_CHUNK_MAX_LEN", 10000)
+        await scripts['init'](args=[max_length])
+
 
 @app.post("/create/", status_code=status.HTTP_201_CREATED)
 async def create(test: Test) -> Rows:
