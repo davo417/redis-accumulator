@@ -1,9 +1,9 @@
 def on_starting(server):
     import clickhouse_connect
     from pathlib import Path
-    from uuid import uuid4
     from glob import glob
     import redis
+    import os
 
     c = clickhouse_connect.get_client(host='localhost', port=8123, username='default', database='redis')
     c.command("DROP TABLE IF EXISTS test")
@@ -27,7 +27,8 @@ def on_starting(server):
 
     scripts = {Path(n).stem: load_script(n) for n in glob("../lua/*.lua")}
     scripts['schema'](keys=['test', 'user_id', 'username', 'active', 'rate'], args=['UInt32', 'String', 'Bool', 'Float64'])
-    scripts['init'](args=[1000])
+    max_length = os.environ.get("REDIS_CHUNK_MAX_LEN", 10000)
+    scripts['init'](args=[max_length])
 
 
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'

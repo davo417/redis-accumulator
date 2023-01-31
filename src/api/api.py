@@ -5,7 +5,6 @@ import redis.asyncio as redis
 from fastapi import FastAPI
 from fastapi import status
 from pathlib import Path
-from uuid import uuid4
 from glob import glob
 
 
@@ -30,7 +29,7 @@ class Flush(BaseModel):
     row_count: int
 
 
-async def do_flush() -> int:        
+async def do_flush() -> int: 
     for chunk in (await r.smembers("chunk:id:swap")):
         insert = await subprocess.create_subprocess_shell(
             f'echo $(redis-cli --eval ../lua/export.lua "{chunk}" "test" , "all")' + ' | ' +
@@ -49,9 +48,9 @@ async def do_flush() -> int:
 
 @app.post("/create/", status_code=status.HTTP_201_CREATED)
 async def create(test: Test) -> int:
-    test: dict = test.dict()
-    test['active'] = str(test['active']).lower()    
-    return await scripts['insert'](keys=list(test.keys()), args=list(test.values()))
+    test_data: dict = test.dict()
+    test_data['active'] = str(test_data['active']).lower()    
+    return await scripts['insert'](keys=list(test_data.keys()), args=list(test_data.values()))
 
 @app.get("/flush/")
 async def flush() -> Flush:
