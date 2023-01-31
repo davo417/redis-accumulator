@@ -14,7 +14,7 @@ DB = 1
 
 r = redis.Redis.from_url(
     url="unix:///var/run/redis/redis.sock",
-    decode_responses=False,
+    decode_responses=True,
     db=DB
 )
 
@@ -46,7 +46,7 @@ async def do_export(chunk_id) -> bytes | None:
         close_fds=True
     )
     ierr, iout = await insert.communicate()
-    if (ierr is not None) and (len(ierr) != 0):
+    if (ierr is not None) and (len(ierr.strip()) != 0):
         return ierr
 
     await r.smove("chunk:id:swap", "chunk:id:clean", chunk_id)
