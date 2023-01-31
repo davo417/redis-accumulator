@@ -3,7 +3,7 @@
 
 -- ARGV: maximun chunk length
 
--- e.g.: redis-cli --eval init.lua
+-- e.g.: redis-cli --eval init.lua , 1000
 
 
 -- Exit if current chunk id is set
