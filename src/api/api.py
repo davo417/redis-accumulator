@@ -1,3 +1,4 @@
+from fastapi.responses import ORJSONResponse
 from fastapi import HTTPException
 from pydantic import BaseModel
 from asyncio import subprocess
@@ -9,8 +10,15 @@ from glob import glob
 import asyncio
 
 
-app = FastAPI()
-r = redis.Redis(host="localhost", decode_responses=True)
+DB = 1
+
+r = redis.Redis.from_url(
+    url="unix:///var/run/redis/redis.sock",
+    decode_responses=False,
+    db=DB
+)
+
+app = FastAPI(default_response_class=ORJSONResponse)
 
 def load_script(path):
     with open(path) as script:
@@ -32,8 +40,10 @@ class Rows(BaseModel):
 
 async def do_export(chunk_id) -> bytes | None:
     insert = await subprocess.create_subprocess_shell(
-        f'echo $(redis-cli --eval ../lua/export.lua "{chunk_id}" "test" , "all")' + ' | ' +
-        'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"'
+        f'echo $(redis-cli -n {DB} --eval ../lua/export.lua "{chunk_id}" "test" , "all")' + ' | ' +
+        'clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"',
+        stderr=subprocess.PIPE, stdout=subprocess.PIPE,
+        close_fds=True
     )
     ierr, iout = await insert.communicate()
     if (ierr is not None) and (len(ierr) != 0):

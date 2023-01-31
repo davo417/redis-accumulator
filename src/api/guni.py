@@ -17,7 +17,7 @@ def on_starting(server):
         PRIMARY KEY (user_id)
     """)
     
-    r = redis.Redis(host="localhost", decode_responses=False)
+    r = redis.Redis(host="localhost", decode_responses=False, db=1)
     r.flushall()
 
     def load_script(path):
@@ -31,13 +31,17 @@ def on_starting(server):
     scripts['init'](args=[max_length])
 
 
+# from os import cpu_count
+
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 worker_class = 'uvicorn.workers.UvicornWorker'
 wsgi_app = 'api.api:app'
 accesslog = 'access.log'
 bind = '127.0.0.1:8000'
 capture_output = True
+preload_app = False
 pythonpath = '..'
 errorlog = '-'
-reload = True
-workers = 4
+reload = False
+workers = 4 #2*(cpu_count() or 0) + 1
+threads = 2
