@@ -9,7 +9,7 @@
 
 
 -- Empty payload table
-local payload = {meta={}, data={}};
+local payload = {};
 
 local id = KEYS[1]
 -- Return empty payload if swaped chunk is invalid
@@ -86,10 +86,8 @@ for fieldi, field in ipairs(fields) do
             end
         end
 
-        -- Set field meta-data, name and type
-        payload.meta[fieldi] = {name=field, type=dtype}
         -- Set field values
-        payload.data[field] = data;
+        payload[field] = data;
     end
 end
 
