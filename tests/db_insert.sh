@@ -22,7 +22,7 @@ redis-cli --eval $LUA_HOME/insert.lua 'user_id' 'username' 'active' 'rate' , 2 '
 # swap chunk
 redis-cli --eval $LUA_HOME/swap.lua > /dev/null
 # export previous chunk with test schema
-redis-cli --eval $LUA_HOME/export.lua '0' 'test' , 'user_id' 'username' 'active' 'rate' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"
+redis-cli --eval $LUA_HOME/export.lua '0' 'test' , 'user_id' 'username' 'active' 'rate' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumns"
 # clean previous chunk data
 redis-cli --eval $LUA_HOME/clean.lua > /dev/null
 
@@ -39,8 +39,8 @@ redis-cli --eval $LUA_HOME/insert.lua 'user_id' 'username' 'active' 'rate' , 6 '
 # swap chunk
 redis-cli --eval $LUA_HOME/swap.lua > /dev/null
 # export previous chunk with test schema
-redis-cli --eval $LUA_HOME/export.lua '1' 'test' , 'all' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"
-redis-cli --eval $LUA_HOME/export.lua '2' 'test' , 'all' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumnsWithMetadata"
+redis-cli --eval $LUA_HOME/export.lua '1' 'test' , 'all' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumns"
+redis-cli --eval $LUA_HOME/export.lua '2' 'test' , 'all' | clickhouse-client --query="INSERT INTO redis.test FORMAT JSONColumns"
 # clean previous chunk data
 redis-cli --eval $LUA_HOME/clean.lua > /dev/null
 
